@@ -19,6 +19,7 @@ from models import Generator, MultiPeriodDiscriminator, MultiScaleDiscriminator,
 from utils import plot_spectrogram, scan_checkpoint, load_checkpoint, save_checkpoint
 
 torch.backends.cudnn.benchmark = True
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'  # switch on if run on my local
 
 
 def train(rank, a, h):
@@ -142,6 +143,7 @@ def train(rank, a, h):
             optim_g.zero_grad()
 
             # L1 Mel-Spectrogram Loss
+            y_mel, y_g_hat_mel = match_length(y_mel, y_g_hat_mel, dim=2)
             loss_mel = F.l1_loss(y_mel, y_g_hat_mel) * 45
 
             y_df_hat_r, y_df_hat_g, fmap_f_r, fmap_f_g = mpd(y, y_g_hat)
@@ -196,6 +198,7 @@ def train(rank, a, h):
                             y_g_hat_mel = mel_spectrogram(y_g_hat.squeeze(1), h.n_fft, h.num_mels, h.sampling_rate,
                                                           h.hop_size, h.win_size,
                                                           h.fmin, h.fmax_for_loss)
+                            y_mel, y_g_hat_mel = match_length(y_mel, y_g_hat_mel, dim=2)
                             val_err_tot += F.l1_loss(y_mel, y_g_hat_mel).item()
 
                             if j <= 4:
@@ -222,6 +225,16 @@ def train(rank, a, h):
         
         if rank == 0:
             print('Time taken for epoch {} is {} sec\n'.format(epoch + 1, int(time.time() - start)))
+
+
+def match_length(x1, x2, dim=0):
+    nd = x1.dim()
+    if x1.size(dim) != x2.size(dim):
+        len = min(x1.size(dim), x2.size(dim))
+        slicing = [slice(None)] * nd
+        slicing[dim] = slice(0, len)
+        return x1[slicing], x2[slicing]
+    return x1, x2
 
 
 def main():

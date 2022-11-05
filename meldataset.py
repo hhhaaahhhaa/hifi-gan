@@ -12,7 +12,11 @@ MAX_WAV_VALUE = 32768.0
 
 
 def load_wav(full_path):
-    sampling_rate, data = read(full_path)
+    if full_path[-4:] == ".wav":
+        sampling_rate, data = read(full_path)
+        assert sampling_rate == 22050  # hifigan use 22050kHz
+    elif full_path[-4:] == ".npy":
+        data = np.load(full_path)
     return data, sampling_rate
 
 
@@ -112,7 +116,7 @@ class MelDataset(torch.utils.data.Dataset):
         filename = self.audio_files[index]
         if self._cache_ref_count == 0:
             audio, sampling_rate = load_wav(filename)
-            audio = audio / MAX_WAV_VALUE
+            # audio = audio / MAX_WAV_VALUE
             if not self.fine_tuning:
                 audio = normalize(audio) * 0.95
             self.cached_wav = audio
@@ -143,6 +147,7 @@ class MelDataset(torch.utils.data.Dataset):
             mel = np.load(
                 os.path.join(self.base_mels_path, os.path.splitext(os.path.split(filename)[-1])[0] + '.npy'))
             mel = torch.from_numpy(mel)
+            mel *= math.log(10)
 
             if len(mel.shape) < 3:
                 mel = mel.unsqueeze(0)
