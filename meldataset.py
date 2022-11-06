@@ -12,11 +12,12 @@ MAX_WAV_VALUE = 32768.0
 
 
 def load_wav(full_path):
-    if full_path[-4:] == ".wav":
-        sampling_rate, data = read(full_path)
-        assert sampling_rate == 22050  # hifigan use 22050kHz
-    elif full_path[-4:] == ".npy":
-        data = np.load(full_path)
+    # if full_path[-4:] == ".wav":
+    #     sampling_rate, data = read(full_path)
+    #     assert sampling_rate == 22050  # hifigan use 22050kHz
+    # elif full_path[-4:] == ".npy":
+    data = np.load(full_path)
+    sampling_rate = 22050
     return data, sampling_rate
 
 
@@ -147,7 +148,7 @@ class MelDataset(torch.utils.data.Dataset):
             mel = np.load(
                 os.path.join(self.base_mels_path, os.path.splitext(os.path.split(filename)[-1])[0] + '.npy'))
             mel = torch.from_numpy(mel)
-            mel *= math.log(10)
+            # mel *= math.log(10)
 
             if len(mel.shape) < 3:
                 mel = mel.unsqueeze(0)
@@ -159,7 +160,7 @@ class MelDataset(torch.utils.data.Dataset):
                     mel_start = random.randint(0, mel.size(2) - frames_per_seg - 1)
                     mel = mel[:, :, mel_start:mel_start + frames_per_seg]
                     audio = audio[:, mel_start * self.hop_size:(mel_start + frames_per_seg) * self.hop_size]
-                else:
+                if audio.size(1) < self.segment_size:
                     mel = torch.nn.functional.pad(mel, (0, frames_per_seg - mel.size(2)), 'constant')
                     audio = torch.nn.functional.pad(audio, (0, self.segment_size - audio.size(1)), 'constant')
 
