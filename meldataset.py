@@ -12,12 +12,13 @@ MAX_WAV_VALUE = 32768.0
 
 
 def load_wav(full_path):
-    # if full_path[-4:] == ".wav":
-    #     sampling_rate, data = read(full_path)
-    #     assert sampling_rate == 22050  # hifigan use 22050kHz
-    # elif full_path[-4:] == ".npy":
-    data = np.load(full_path)
-    sampling_rate = 22050
+    try:
+        sampling_rate, data = read(full_path)
+    except:
+        data = np.load(full_path)
+        sampling_rate = 22050
+    assert sampling_rate == 22050  # hifigan use 22050kHz
+
     return data, sampling_rate
 
 
